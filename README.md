@@ -4,16 +4,16 @@ A collection of useful Tampermonkey scripts for various websites.
 
 ## Scripts
 
-### [Twitter Time Filter (Flicker-Free)](./Tweet_filter/tweet_filter.user.js)
+### [Twitter Time Filter (Official Search)](./Tweet_filter/tweet_filter.user.js)
 
-Filter tweets seamlessly on the Home timeline and Profile pages without refreshing or jumping to search results. This script intercepts X's (Twitter) API data to provide a "flicker-free" experience.
+Filter tweets reliably using X's (Twitter) official search syntax (`since:` and `until:`). This approach is the most stable as it leverages X's native search engine to find tweets within specific date ranges.
 
 #### Features
-- 🚀 **API Interception**: Filters tweets *before* they are rendered, ensuring zero flickering.
-- 🕒 **In-Place Filtering**: Stay on your Home or Profile page while filtering. No more jumping to search results.
-- 📊 **Status Tracker**: Real-time counter showing how many tweets have been filtered out.
-- 🟢 **Visual Indicator**: A status dot showing whether the filter is currently active.
-- 📉 **Minimized Mode**: Keep the UI clean when not in use.
+- ✅ **100% Reliable**: Uses official search parameters, ensuring no tweets are missed.
+- 👤 **Auto Profile Detection**: Automatically adds `(from:username)` when you are on a specific user's profile page.
+- ⌨️ **Keyword Support**: Combine your date filters with optional keywords.
+- 🕒 **Date Selection**: Clean UI with date pickers for easy range selection.
+- 📉 **Minimized Mode**: Keep the UI tucked away at the bottom right.
 
 #### Support
 - `https://twitter.com/*`
@@ -29,10 +29,10 @@ Filter tweets seamlessly on the Home timeline and Profile pages without refreshi
 
 ## How to use
 
-Once installed, a **"无感时间过滤" (Flicker-Free Filter)** panel will appear at the bottom right.
-1. Select a **Start Date** and/or **End Date**.
-2. Click **"开启过滤" (Apply Filter)**.
-3. The script will automatically filter tweets as you scroll.
-4. Click **"关闭" (Close)** to stop filtering and show all tweets again.
+Once installed, an **"高级时间搜索" (Advanced Time Search)** panel will appear at the bottom right.
+1. (Optional) Enter a **Keyword**.
+2. Select a **Start Date** and/or **End Date**.
+3. Click **"前往官方筛选结果" (Go to official results)**.
+4. The current page will redirect to the official search results for that period (e.g., `since:2025-01-01 until:2025-01-31`).
 
-*Note: For the best experience, scroll down or refresh once after applying a new filter to let the API interceptor catch new data.*
+*Note: Navigation happens in the same tab for a seamless workflow.*
