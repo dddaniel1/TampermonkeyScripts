@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Twitter Time Filter
 // @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  Filter tweets by time range
+// @version      1.0
+// @description  Filter tweets using official search syntax (since:/until:)
 // @author       Antigravity
 // @match        https://twitter.com/*
 // @match        https://x.com/*
@@ -56,13 +56,17 @@
         }
         .tf-input-group input {
             width: 100%;
-            padding: 6px;
+            padding: 8px;
             background: #192734;
             border: 1px solid #38444d;
             border-radius: 4px;
             color: white;
             font-size: 14px;
             box-sizing: border-box;
+            outline: none;
+        }
+        .tf-input-group input:focus {
+            border-color: #1d9bf0;
         }
         .tf-actions {
             display: flex;
@@ -71,33 +75,26 @@
         }
         .tf-btn {
             flex: 1;
-            padding: 8px;
+            padding: 10px;
             border-radius: 9999px;
             border: none;
             font-weight: bold;
             cursor: pointer;
             font-size: 14px;
+            transition: background 0.2s;
         }
-        #tf-apply-btn {
+        #tf-search-btn {
             background: #1d9bf0;
             color: white;
         }
-        #tf-apply-btn:hover {
+        #tf-search-btn:hover {
             background: #1a8cd8;
         }
-        #tf-clear-btn {
-            background: transparent;
-            border: 1px solid #536471;
-            color: #1d9bf0;
-        }
-        #tf-clear-btn:hover {
-            background: rgba(29, 155, 240, 0.1);
-        }
-        .tf-status {
+        .tf-hint {
             font-size: 11px;
             color: #8899a6;
-            margin-top: 8px;
-            text-align: center;
+            margin-top: 10px;
+            line-height: 1.4;
         }
         #tf-toggle-icon {
             font-size: 12px;
@@ -109,38 +106,45 @@
     `);
 
     // State
-    let filterRange = GM_getValue('tf_range', { start: '', end: '' });
     let isMinimized = GM_getValue('tf_minimized', false);
+    let lastConfig = GM_getValue('tf_last_config', { start: '', end: '', keyword: '' });
 
     // Create UI
     function createUI() {
+        if (document.getElementById('twitter-time-filter-panel')) return;
+
         const panel = document.createElement('div');
         panel.id = 'twitter-time-filter-panel';
         if (isMinimized) panel.classList.add('minimized');
         
         panel.innerHTML = `
-            <h3 id="tf-header">推特时间过滤 <span id="tf-toggle-icon">▼</span></h3>
+            <h3 id="tf-header">高级时间搜索 <span id="tf-toggle-icon">▼</span></h3>
             <div id="tf-content">
                 <div class="tf-input-group">
-                    <label>开始时间</label>
-                    <input type="datetime-local" id="tf-start-date" value="${filterRange.start}">
+                    <label>关键词 (可选)</label>
+                    <input type="text" id="tf-keyword" placeholder="输入搜索词..." value="${lastConfig.keyword}">
                 </div>
                 <div class="tf-input-group">
-                    <label>结束时间</label>
-                    <input type="datetime-local" id="tf-end-date" value="${filterRange.end}">
+                    <label>开始日期</label>
+                    <input type="date" id="tf-start-date" value="${lastConfig.start}">
+                </div>
+                <div class="tf-input-group">
+                    <label>结束日期</label>
+                    <input type="date" id="tf-end-date" value="${lastConfig.end}">
                 </div>
                 <div class="tf-actions">
-                    <button id="tf-clear-btn" class="tf-btn">清除</button>
-                    <button id="tf-apply-btn" class="tf-btn">应用</button>
+                    <button id="tf-search-btn" class="tf-btn">前往搜索结果</button>
                 </div>
-                <div id="tf-status-text" class="tf-status"></div>
+                <div class="tf-hint">
+                    * 自动识别当前个人主页用户<br>
+                    * 使用官方 since/until 语法
+                </div>
             </div>
         `;
         document.body.appendChild(panel);
 
         document.getElementById('tf-header').onclick = toggleMinimize;
-        document.getElementById('tf-apply-btn').onclick = applyFilter;
-        document.getElementById('tf-clear-btn').onclick = clearFilter;
+        document.getElementById('tf-search-btn').onclick = performSearch;
     }
 
     function toggleMinimize() {
@@ -150,109 +154,54 @@
         GM_setValue('tf_minimized', isMinimized);
     }
 
-    function updateStatus(text) {
-        document.getElementById('tf-status-text').innerText = text;
-    }
-
-    function applyFilter() {
+    function performSearch() {
         const start = document.getElementById('tf-start-date').value;
         const end = document.getElementById('tf-end-date').value;
-        filterRange = { start, end };
-        GM_setValue('tf_range', filterRange);
-        updateStatus('过滤器已激活');
-        runFilter();
-    }
+        const keyword = document.getElementById('tf-keyword').value;
 
-    function clearFilter() {
-        document.getElementById('tf-start-date').value = '';
-        document.getElementById('tf-end-date').value = '';
-        filterRange = { start: '', end: '' };
-        GM_setValue('tf_range', filterRange);
-        showAllTweets();
-        updateStatus('过滤器已停用');
-    }
-
-    function showAllTweets() {
-        const tweets = document.querySelectorAll('article');
-        tweets.forEach(tweet => {
-            tweet.style.display = '';
-        });
-    }
-
-    function isWithinRange(datetimeStr) {
-        if (!filterRange.start && !filterRange.end) return true;
-        const tweetTime = new Date(datetimeStr).getTime();
-        
-        if (filterRange.start) {
-            const startTime = new Date(filterRange.start).getTime();
-            if (tweetTime < startTime) return false;
+        if (!start && !end && !keyword) {
+            alert('请至少输入一个搜索条件！');
+            return;
         }
+
+        // Save config
+        GM_setValue('tf_last_config', { start, end, keyword });
+
+        let queryParts = [];
         
-        if (filterRange.end) {
-            const endTime = new Date(filterRange.end).getTime();
-            if (tweetTime > endTime) return false;
+        // 1. Keyword
+        if (keyword) queryParts.push(keyword);
+
+        // 2. Detect Username (if on profile page)
+        const pathParts = window.location.pathname.split('/').filter(p => p);
+        const nonUserPaths = ['home', 'explore', 'notifications', 'messages', 'i', 'settings', 'search', 'compose', 'intent'];
+        if (pathParts.length === 1 && !nonUserPaths.includes(pathParts[0].toLowerCase())) {
+            queryParts.push(`(from:${pathParts[0]})`);
         }
+
+        // 3. Since
+        if (start) queryParts.push(`since:${start}`);
+
+        // 4. Until
+        if (end) queryParts.push(`until:${end}`);
+
+        const finalQuery = queryParts.join(' ').trim();
+        const searchUrl = `https://x.com/search?q=${encodeURIComponent(finalQuery)}&f=live`;
         
-        return true;
+        window.open(searchUrl, '_blank');
     }
-
-    let filterTimeout;
-    function runFilter() {
-        if (filterTimeout) clearTimeout(filterTimeout);
-        filterTimeout = setTimeout(() => {
-            if (!filterRange.start && !filterRange.end) {
-                showAllTweets();
-                return;
-            }
-
-            const tweets = document.querySelectorAll('article');
-            tweets.forEach(tweet => {
-                const timeTag = tweet.querySelector('time');
-                if (timeTag) {
-                    const datetime = timeTag.getAttribute('datetime');
-                    if (datetime) {
-                        if (isWithinRange(datetime)) {
-                            tweet.style.display = '';
-                        } else {
-                            tweet.style.display = 'none';
-                        }
-                    }
-                }
-            });
-        }, 100);
-    }
-
-    // Observer for dynamic loading
-    const observer = new MutationObserver((mutations) => {
-        let shouldRun = false;
-        for (const mutation of mutations) {
-            if (mutation.addedNodes.length > 0) {
-                shouldRun = true;
-                break;
-            }
-        }
-        if (shouldRun) runFilter();
-    });
 
     // Initialize
     function init() {
-        if (document.getElementById('twitter-time-filter-panel')) return;
         createUI();
-        runFilter();
-        
-        // Target specifically the timeline container if possible, otherwise body
-        const container = document.querySelector('main') || document.body;
-        observer.observe(container, { childList: true, subtree: true });
     }
 
-    // Wait for body and main to be available
+    // Wait for body to be available
     const checkInterval = setInterval(() => {
-        if (document.body && document.querySelector('main')) {
+        if (document.body) {
             clearInterval(checkInterval);
             init();
         }
     }, 500);
-
-})();
 
 })();

@@ -6,13 +6,14 @@ A collection of useful Tampermonkey scripts for various websites.
 
 ### [Twitter Time Filter](./Tweet_filter/tweet_filter.user.js)
 
-Filter tweets by a specific time range on Twitter (X).
+Filter tweets using official X (Twitter) search syntax (`since:` and `until:`). This approach is faster, more stable, and utilizes X's native search capabilities.
 
 #### Features
-- 🕒 **Time Range Filtering**: Set custom start and end dates/times to filter your timeline.
-- 🎨 **Modern UI**: A sleek, dark-themed control panel that's easy to use.
+- 🔍 **Search-Based Filtering**: Uses official search parameters for accurate and reliable results.
+- 👤 **Auto Profile Detection**: Automatically adds `(from:username)` when you are on a specific user's profile page.
+- ⌨️ **Keyword Support**: Add optional keywords to narrow down your time-based search.
+- 🕒 **Date Selection**: Easy-to-use date pickers for start and end ranges.
 - 📉 **Minimized Mode**: Keep the UI out of the way when not in use.
-- 🔄 **Auto-Refreshing**: Automatically applies filters as you scroll through your timeline.
 
 #### Support
 - `https://twitter.com/*`
@@ -28,7 +29,10 @@ Filter tweets by a specific time range on Twitter (X).
 
 ## How to use
 
-Once installed, a "推特时间过滤" (Twitter Time Filter) panel will appear at the bottom right of your Twitter/X screen.
-- Click the header to expand/collapse.
-- Enter your desired time range and click **应用** (Apply).
-- Click **清除** (Clear) to remove all filters and show all tweets.
+Once installed, an **"高级时间搜索" (Advanced Time Search)** panel will appear at the bottom right of your screen.
+1. (Optional) Enter a **Keyword**.
+2. Select a **Start Date** and/or **End Date**.
+3. Click **"前往搜索结果" (Go to search results)**.
+4. A new tab will open with the correctly formatted official search query (e.g., `keyword since:2025-01-01 until:2025-01-31`).
+
+*Note: If you are on a profile page like `x.com/username`, the script will automatically include `(from:username)` in the search.*
