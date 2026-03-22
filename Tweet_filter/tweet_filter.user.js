@@ -30,12 +30,20 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             backdrop-filter: blur(5px);
+            transition: transform 0.3s ease;
+        }
+        #twitter-time-filter-panel.minimized {
+            transform: translateY(calc(100% - 40px));
         }
         #twitter-time-filter-panel h3 {
             margin: 0 0 10px 0;
             font-size: 16px;
             border-bottom: 1px solid #38444d;
             padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
         }
         .tf-input-group {
             margin-bottom: 10px;
@@ -91,35 +99,55 @@
             margin-top: 8px;
             text-align: center;
         }
+        #tf-toggle-icon {
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+        #twitter-time-filter-panel.minimized #tf-toggle-icon {
+            transform: rotate(180deg);
+        }
     `);
 
     // State
     let filterRange = GM_getValue('tf_range', { start: '', end: '' });
+    let isMinimized = GM_getValue('tf_minimized', false);
 
     // Create UI
     function createUI() {
         const panel = document.createElement('div');
         panel.id = 'twitter-time-filter-panel';
+        if (isMinimized) panel.classList.add('minimized');
+        
         panel.innerHTML = `
-            <h3>推特时间过滤</h3>
-            <div class="tf-input-group">
-                <label>开始时间</label>
-                <input type="datetime-local" id="tf-start-date" value="${filterRange.start}">
+            <h3 id="tf-header">推特时间过滤 <span id="tf-toggle-icon">▼</span></h3>
+            <div id="tf-content">
+                <div class="tf-input-group">
+                    <label>开始时间</label>
+                    <input type="datetime-local" id="tf-start-date" value="${filterRange.start}">
+                </div>
+                <div class="tf-input-group">
+                    <label>结束时间</label>
+                    <input type="datetime-local" id="tf-end-date" value="${filterRange.end}">
+                </div>
+                <div class="tf-actions">
+                    <button id="tf-clear-btn" class="tf-btn">清除</button>
+                    <button id="tf-apply-btn" class="tf-btn">应用</button>
+                </div>
+                <div id="tf-status-text" class="tf-status"></div>
             </div>
-            <div class="tf-input-group">
-                <label>结束时间</label>
-                <input type="datetime-local" id="tf-end-date" value="${filterRange.end}">
-            </div>
-            <div class="tf-actions">
-                <button id="tf-clear-btn" class="tf-btn">清除</button>
-                <button id="tf-apply-btn" class="tf-btn">应用</button>
-            </div>
-            <div id="tf-status-text" class="tf-status"></div>
         `;
         document.body.appendChild(panel);
 
+        document.getElementById('tf-header').onclick = toggleMinimize;
         document.getElementById('tf-apply-btn').onclick = applyFilter;
         document.getElementById('tf-clear-btn').onclick = clearFilter;
+    }
+
+    function toggleMinimize() {
+        const panel = document.getElementById('twitter-time-filter-panel');
+        isMinimized = !isMinimized;
+        panel.classList.toggle('minimized', isMinimized);
+        GM_setValue('tf_minimized', isMinimized);
     }
 
     function updateStatus(text) {
@@ -145,41 +173,65 @@
     }
 
     function showAllTweets() {
-        document.querySelectorAll('article').forEach(tweet => {
+        const tweets = document.querySelectorAll('article');
+        tweets.forEach(tweet => {
             tweet.style.display = '';
         });
     }
 
-    function isWithinRange(timestamp) {
+    function isWithinRange(datetimeStr) {
         if (!filterRange.start && !filterRange.end) return true;
-        const tweetDate = new Date(timestamp);
-        if (filterRange.start && tweetDate < new Date(filterRange.start)) return false;
-        if (filterRange.end && tweetDate > new Date(filterRange.end)) return false;
+        const tweetTime = new Date(datetimeStr).getTime();
+        
+        if (filterRange.start) {
+            const startTime = new Date(filterRange.start).getTime();
+            if (tweetTime < startTime) return false;
+        }
+        
+        if (filterRange.end) {
+            const endTime = new Date(filterRange.end).getTime();
+            if (tweetTime > endTime) return false;
+        }
+        
         return true;
     }
 
+    let filterTimeout;
     function runFilter() {
-        if (!filterRange.start && !filterRange.end) return;
+        if (filterTimeout) clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(() => {
+            if (!filterRange.start && !filterRange.end) {
+                showAllTweets();
+                return;
+            }
 
-        const tweets = document.querySelectorAll('article');
-        tweets.forEach(tweet => {
-            const timeTag = tweet.querySelector('time');
-            if (timeTag) {
-                const datetime = timeTag.getAttribute('datetime');
-                if (datetime) {
-                    if (isWithinRange(datetime)) {
-                        tweet.style.display = '';
-                    } else {
-                        tweet.style.display = 'none';
+            const tweets = document.querySelectorAll('article');
+            tweets.forEach(tweet => {
+                const timeTag = tweet.querySelector('time');
+                if (timeTag) {
+                    const datetime = timeTag.getAttribute('datetime');
+                    if (datetime) {
+                        if (isWithinRange(datetime)) {
+                            tweet.style.display = '';
+                        } else {
+                            tweet.style.display = 'none';
+                        }
                     }
                 }
-            }
-        });
+            });
+        }, 100);
     }
 
     // Observer for dynamic loading
-    const observer = new MutationObserver(() => {
-        runFilter();
+    const observer = new MutationObserver((mutations) => {
+        let shouldRun = false;
+        for (const mutation of mutations) {
+            if (mutation.addedNodes.length > 0) {
+                shouldRun = true;
+                break;
+            }
+        }
+        if (shouldRun) runFilter();
     });
 
     // Initialize
@@ -187,15 +239,20 @@
         if (document.getElementById('twitter-time-filter-panel')) return;
         createUI();
         runFilter();
-        observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Target specifically the timeline container if possible, otherwise body
+        const container = document.querySelector('main') || document.body;
+        observer.observe(container, { childList: true, subtree: true });
     }
 
-    // Wait for body to be available
+    // Wait for body and main to be available
     const checkInterval = setInterval(() => {
-        if (document.body) {
+        if (document.body && document.querySelector('main')) {
             clearInterval(checkInterval);
             init();
         }
     }, 500);
+
+})();
 
 })();
