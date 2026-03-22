@@ -4,16 +4,16 @@ A collection of useful Tampermonkey scripts for various websites.
 
 ## Scripts
 
-### [Twitter Time Filter](./Tweet_filter/tweet_filter.user.js)
+### [Twitter Time Filter (Flicker-Free)](./Tweet_filter/tweet_filter.user.js)
 
-Filter tweets using official X (Twitter) search syntax (`since:` and `until:`). This approach is faster, more stable, and utilizes X's native search capabilities.
+Filter tweets seamlessly on the Home timeline and Profile pages without refreshing or jumping to search results. This script intercepts X's (Twitter) API data to provide a "flicker-free" experience.
 
 #### Features
-- 🔍 **Search-Based Filtering**: Uses official search parameters for accurate and reliable results.
-- 👤 **Auto Profile Detection**: Automatically adds `(from:username)` when you are on a specific user's profile page.
-- ⌨️ **Keyword Support**: Add optional keywords to narrow down your time-based search.
-- 🕒 **Date Selection**: Easy-to-use date pickers for start and end ranges.
-- 📉 **Minimized Mode**: Keep the UI out of the way when not in use.
+- 🚀 **API Interception**: Filters tweets *before* they are rendered, ensuring zero flickering.
+- 🕒 **In-Place Filtering**: Stay on your Home or Profile page while filtering. No more jumping to search results.
+- 📊 **Status Tracker**: Real-time counter showing how many tweets have been filtered out.
+- 🟢 **Visual Indicator**: A status dot showing whether the filter is currently active.
+- 📉 **Minimized Mode**: Keep the UI clean when not in use.
 
 #### Support
 - `https://twitter.com/*`
@@ -29,10 +29,10 @@ Filter tweets using official X (Twitter) search syntax (`since:` and `until:`). 
 
 ## How to use
 
-Once installed, an **"高级时间搜索" (Advanced Time Search)** panel will appear at the bottom right of your screen.
-1. (Optional) Enter a **Keyword**.
-2. Select a **Start Date** and/or **End Date**.
-3. Click **"前往搜索结果" (Go to search results)**.
-4. A new tab will open with the correctly formatted official search query (e.g., `keyword since:2025-01-01 until:2025-01-31`).
+Once installed, a **"无感时间过滤" (Flicker-Free Filter)** panel will appear at the bottom right.
+1. Select a **Start Date** and/or **End Date**.
+2. Click **"开启过滤" (Apply Filter)**.
+3. The script will automatically filter tweets as you scroll.
+4. Click **"关闭" (Close)** to stop filtering and show all tweets again.
 
-*Note: If you are on a profile page like `x.com/username`, the script will automatically include `(from:username)` in the search.*
+*Note: For the best experience, scroll down or refresh once after applying a new filter to let the API interceptor catch new data.*
